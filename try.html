@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile | Dorm Dash</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+
+    <!-- Navbar -->
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">Dorm Dash</h1>
+            <a href="index.html" class="text-white">Home</a>
+        </div>
+    </nav>
+
+    <!-- Profile Section -->
+    <div class="max-w-2xl mx-auto mt-10 bg-white p-6 rounded-lg shadow-md">
+        <div class="flex flex-col items-center">
+            <!-- ID Card (Used as Profile Picture) -->
+            <img id="id-card-image" class="w-48 h-auto rounded-lg border-2 border-blue-600 object-cover object-center" src="https://via.placeholder.com/100" alt="ID Card">
+            
+            <input id="full-name" class="text-center border border-gray-300 px-2 py-1 rounded focus:outline-none mt-2 text-xl font-semibold" type="text" placeholder="Full Name" />
+            
+            <p id="user-username" class="text-gray-500">Loading...</p>
+            <p id="user-email" class="text-gray-500">Loading...</p>
+
+            <input id="user-phone" class="text-center border border-gray-300 px-2 py-1 rounded focus:outline-none mt-2" type="tel" placeholder="Enter Phone Number" />
+
+            <button onclick="updateProfile()" class="mt-2 bg-green-600 text-white px-4 py-2 rounded">Update Profile</button>
+        </div>
+
+        <!-- Upload ID Card -->
+        <div class="mt-6 text-center">
+            <input type="file" id="upload-id" class="hidden">
+            <button onclick="document.getElementById('upload-id').click()" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded">
+                Upload New ID Card (Profile)
+            </button>
+        </div>
+    </div>
+
+    <!-- Logout Button -->
+    <div class="max-w-2xl mx-auto mt-4 text-center">
+        <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded">Log Out</button>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
+
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAeOS8_0tDWKnfAwLf0GRKr6JaopYj1nnY",
+            authDomain: "dormdash-40a10.firebaseapp.com",
+            databaseURL: "https://dormdash-40a10-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "dormdash-40a10",
+            storageBucket: "dormdash-40a10.appspot.com",
+            messagingSenderId: "219135353050",
+            appId: "1:219135353050:web:49446a2e74414ebf8105e3"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const fullNameField = document.getElementById("full-name");
+            const emailField = document.getElementById("user-email");
+            const phoneField = document.getElementById("user-phone");
+            const usernameField = document.getElementById("user-username");
+            const idCardImage = document.getElementById("id-card-image");
+            const fileInput = document.getElementById("upload-id");
+
+            // Load User Data from Firestore
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    const userDocRef = doc(db, "users", user.uid);
+                    const userDoc = await getDoc(userDocRef);
+
+                    if (userDoc.exists()) {
+                        const data = userDoc.data();
+                        fullNameField.value = data.fullName || "";
+                        emailField.innerText = data.email || user.email;
+                        phoneField.value = data.mobileNumber || "";
+                        usernameField.innerText = data.username || "No Username";
+
+                        // Load ID Card from Storage URL
+                        idCardImage.src = data.idCard || "https://via.placeholder.com/100";
+                    } else {
+                        console.log("User document not found.");
+                    }
+                } else {
+                    alert("Please log in to access your profile.");
+                    window.location.href = "index.html";
+                }
+            });
+
+            // Upload ID Card (Saves to Firebase Storage)
+            fileInput.addEventListener("change", async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const user = auth.currentUser;
+                if (!user) return alert("Please log in first.");
+
+                const storageRef = ref(storage, `idCards/${user.uid}`);
+                await uploadBytes(storageRef, file);
+
+                // Get the Download URL and save it in Firestore
+                const downloadURL = await getDownloadURL(storageRef);
+                await setDoc(doc(db, "users", user.uid), { idCard: downloadURL }, { merge: true });
+
+                idCardImage.src = downloadURL;
+                alert("Profile Picture (ID Card) updated!");
+            });
+
+            // Function to Update Profile Data
+            window.updateProfile = async function () {
+                const user = auth.currentUser;
+                if (!user) {
+                    alert("Please log in first.");
+                    return;
+                }
+
+                const newName = fullNameField.value.trim();
+                const newPhone = phoneField.value.trim();
+
+                if (!newName || !newPhone) {
+                    alert("Please fill in all fields.");
+                    return;
+                }
+
+                const userDocRef = doc(db, "users", user.uid);
+
+                try {
+                    await setDoc(userDocRef, { fullName: newName, mobileNumber: newPhone }, { merge: true });
+
+                    alert("Profile updated successfully!");
+                } catch (error) {
+                    console.error("Error updating profile:", error);
+                    alert("Failed to update profile. Try again.");
+                }
+            };
+
+            // Logout
+            window.logout = function () {
+                auth.signOut().then(() => {
+                    alert("Logged out successfully!");
+                    window.location.href = "index.html";
+                });
+            };
+        });
+    </script>
+
+</body>
+</html>
