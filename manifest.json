@@ -4,6 +4,15 @@
   "background_color": "#ffffff",
   "short_name": "DormDash",
   "description": "A campus delivery service",
-  "start_url": "https://dormdash0.netlify.app/"
+  "start_url": "https://dormdash0.netlify.app/",
+  "icons": [
+  {
+      "src": "assets/images/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+  }
+]
+
 
 }
