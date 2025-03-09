@@ -3,5 +3,7 @@
   "theme_color": "#000000",
   "background_color": "#ffffff",
   "short_name": "DormDash",
-  "description": "A campus delivery service"
+  "description": "A campus delivery service",
+  "start_url": "https://dormdash0.netlify.app/"
+
 }
