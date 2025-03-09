@@ -2,5 +2,6 @@
   "name": "Dorm Dash",
   "theme_color": "#000000",
   "background_color": "#000000",
-  "short_name": "DormDash"
+  "short_name": "DormDash",
+  "start_url": "https://dormdash0.netlify.app/",
 }
